@@ -24,6 +24,7 @@
 #define IDC_EDIT7                       1014
 #define IDC_EDIT8                       1015
 #define IDC_EDIT9                       1016
+#define IDC_DATE                        1016
 #define IDC_STATIC02                    1017
 #define IDC_STATIC03                    1018
 

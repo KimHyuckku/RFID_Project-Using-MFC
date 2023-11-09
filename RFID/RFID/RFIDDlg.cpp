@@ -28,6 +28,8 @@ using namespace std;
 
 #define MAX_DATA 100
 
+string st_string[10];
+
 CString st_data_number;
 CString st_card_number;
 CString st_name;
@@ -92,8 +94,9 @@ CRFIDDlg::CRFIDDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_RFID_DIALOG, pParent)
 	, m_strRfid(_T(""))
 	, m_strRfid2(_T(""))
-	, st_strRfid(_T(""))
-	, st_strRfid2(_T(""))
+	, st_m_strRfid(_T(""))
+	, bo_m_strRfid(_T(""))
+	, m_strDate(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
@@ -107,8 +110,7 @@ void CRFIDDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 
-
-	DDX_Text(pDX, IDC_EDIT2, m_strRfid); // st_name[st_flag]);
+	DDX_Text(pDX, IDC_EDIT2, m_strRfid);
 	DDX_Text(pDX, IDC_EDIT1, st_name);
 	DDX_Text(pDX, IDC_EDIT3, st_number);
 	DDX_Text(pDX, IDC_EDIT4, st_borrow_date);
@@ -117,6 +119,8 @@ void CRFIDDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT7, m_strRfid2);
 	DDX_Text(pDX, IDC_EDIT6, bo_name);
 	DDX_Text(pDX, IDC_EDIT8, bo_number);
+	DDX_Text(pDX, IDC_DATE, m_strDate);
+	DDV_MaxChars(pDX, m_strDate, 20);
 }
 
 BEGIN_MESSAGE_MAP(CRFIDDlg, CDialogEx)
@@ -131,6 +135,7 @@ BEGIN_MESSAGE_MAP(CRFIDDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON6, &CRFIDDlg::OnBnClickedButton6)
 	ON_BN_CLICKED(IDC_BUTTON7, &CRFIDDlg::OnBnClickedButton7)
 	ON_BN_CLICKED(IDOK, &CRFIDDlg::OnBnClickedOk)
+	ON_COMMAND(IDD_RFID_DIALOG, &CRFIDDlg::OnIddRfidDialog)
 END_MESSAGE_MAP()
 
 
@@ -286,9 +291,11 @@ void CRFIDDlg::OnReadOnce()
 				printf("%02x ", readData[i]);
 			}
 			m_strRfid2 = temp1;
-			st_strRfid2 = st_temp1;
+			bo_m_strRfid = st_temp1;
 
-			find_book(st_strRfid2);
+			find_book(bo_m_strRfid);
+			show_bo_picture();
+			PlaySoundW(_T("bo_alarm.wav"), NULL, SND_FILENAME | SND_ASYNC);
 			UpdateData(FALSE);
 			printf("\n");
 		}
@@ -314,9 +321,11 @@ void CRFIDDlg::OnReadOnce()
 			printf("%02x ", readData[i]);
 		}
 		m_strRfid = temp3;
-		st_strRfid = st_temp3;
+		st_m_strRfid = st_temp3;
 
-		find_student(st_strRfid);
+		find_student(st_m_strRfid);
+		show_st_picture();
+		PlaySoundW(_T("st_alarm.wav"), NULL, SND_FILENAME | SND_ASYNC);
 		UpdateData(FALSE);
 		printf("\n");
 	}
@@ -362,47 +371,28 @@ void CRFIDDlg::OnDisconnect()
 
 void CRFIDDlg::OnBnClickedButton4()
 {
-	/////////////////////////////////  이미지 출력  /////////////////////////////////
-	CRect m_rect;
-	CBitmap m_bitmap;
-	//CString Path_img = "img\\null.bmp";
-	CString Path_img = st_picture; //_T("img\\beer.bmp");
-	m_bitmap.DeleteObject();
-	m_bitmap.Attach((HBITMAP)LoadImage(NULL, Path_img, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
-	CDC* pDC = GetDC();
-	CDC memDC;
-	memDC.CreateCompatibleDC(pDC);
-	memDC.SelectObject(m_bitmap);
-	((CStatic*)GetDlgItem(IDC_STATIC02))->GetWindowRect(m_rect);
-	ScreenToClient(&m_rect);
-	CClientDC   dc(this);
+	CString text;
 
-	dc.BitBlt(60, 25, 320, 200, &memDC, 0, 0, SRCCOPY);
+	UpdateData(TRUE);
+	st_borrow_date = m_strDate;
 
-	ReleaseDC(pDC);
-	DeleteDC(memDC);
+	text = st_borrow_date + _T("\n대출 날짜 입력완료");
+	MessageBox(text);
+
+	return;
 }
 
 void CRFIDDlg::OnBnClickedButton5()
 {
-	CRect m_rect;
-	CBitmap m_bitmap;
-	//CString Path_img = "img\\null.bmp";
-	CString Path_img = bo_picture; //_T("img\\beer.bmp");
-	m_bitmap.DeleteObject();
-	m_bitmap.Attach((HBITMAP)LoadImage(NULL, Path_img, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
-	CDC* pDC = GetDC();
-	CDC memDC;
-	memDC.CreateCompatibleDC(pDC);
-	memDC.SelectObject(m_bitmap);
-	((CStatic*)GetDlgItem(IDC_STATIC03))->GetWindowRect(m_rect);
-	ScreenToClient(&m_rect);
-	CClientDC   dc(this);
+	CString text;
 
-	dc.BitBlt(680, 25, 280, 200, &memDC, 0, 0, SRCCOPY);
+	UpdateData(TRUE);
+	st_return_date = m_strDate;
 
-	ReleaseDC(pDC);
-	DeleteDC(memDC);
+	text = st_return_date + _T("\n반납 날짜 입력완료");
+	MessageBox(text);
+
+	return;
 }
 
 
@@ -420,12 +410,28 @@ void CRFIDDlg::OnBnClickedButton6()
 	{
 		if (st_borrow_flag == _T("0"))
 		{
-			st_borrow_flag.Format(_T("1"));
+			ofstream fiout("c:\\work\\RFID\\RFID\\RFID\\data\\student_data.csv");
+			if (!fiout) { // 열기 실패 검사
+				cout << "student_data.csv 파일을 열 수 없다\n";
+			}
 
+			for (int i = 0; i < st_flag; i++)
+			{
+				fiout << st_string[i] << "\n";
+			}
+			fiout << string(CT2CA(st_data_number)) << "," << string(CT2CA(st_card_number)) << "," << string(CT2CA(st_name))
+				  << "," << string(CT2CA(st_number)) << "," << string(CT2CA(st_picture)) << ",1," << string(CT2CA(st_borrow_date))
+				  << ",-," << book_number << endl;
+			for (int i = st_flag+1; i < 5; i++)
+			{
+				fiout << st_string[i] << "\n";
+			}
 
+			//fiout << name << "," << school_number << "," << name << ",안녕하세요, 이거 띄어쓰기도 되냐?, ㅏㅁㄴ\n"; // name 쓰기
+			//fiout << school_number << "," << dept << "\n"; // sid 쓰기
+			//fiout << dept << "\n"; // dept 쓰기
 
-
-
+			fiout.close(); // 파일 닫기	
 			AfxMessageBox(_T("대출이 완료되었습니다."));
 		}
 		else
@@ -440,7 +446,51 @@ void CRFIDDlg::OnBnClickedButton6()
 
 void CRFIDDlg::OnBnClickedButton7()
 {
-	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	if (book_number == "")
+	{
+		AfxMessageBox(_T("책 카드를 찍어주세요."));
+	}
+	else if (st_number == "")
+	{
+		AfxMessageBox(_T("학생 카드를 찍어주세요."));
+	}
+	else
+	{
+		if (st_book_number == bo_number)
+		{
+			if (st_borrow_flag == _T("1"))
+			{
+				ofstream fiout("c:\\work\\RFID\\RFID\\RFID\\data\\student_data.csv");
+				if (!fiout) { // 열기 실패 검사
+					AfxMessageBox(_T("student_data.csv 파일을 열 수 없다"));
+					cout << "student_data.csv 파일을 열 수 없다\n";
+				}
+
+				for (int i = 0; i < st_flag; i++)
+				{
+					fiout << st_string[i] << "\n";
+				}
+				fiout << string(CT2CA(st_data_number)) << "," << string(CT2CA(st_card_number)) << "," << string(CT2CA(st_name))
+					<< "," << string(CT2CA(st_number)) << "," << string(CT2CA(st_picture)) << ",0," << string(CT2CA(st_borrow_date))
+					<< "," << string(CT2CA(st_return_date)) << "," << book_number << endl;
+				for (int i = st_flag + 1; i < 5; i++)
+				{
+					fiout << st_string[i] << "\n";
+				}
+
+				fiout.close(); // 파일 닫기	
+				AfxMessageBox(_T("반납이 완료되었습니다."));
+			}
+			else
+			{
+				AfxMessageBox(_T("반납할 책이 없습니다."));
+			}
+		}
+		else
+		{
+			AfxMessageBox(_T("반납할 책을 찍어주세요!"));
+		}
+	}
 }
 
 
@@ -454,23 +504,23 @@ void CRFIDDlg::OnBnClickedOk()
 void find_student(CString _m_strRfid)
 {
 	int i;
-	char temp[100], temp0[100], * context=NULL;
-	//char *temp2;
+	char temp[100], temp0[200], * context=NULL;
 	string temp2;
 
 
 	ifstream fin;
 	fin.open("c:\\work\\RFID\\RFID\\RFID\\data\\student_data.csv");
 	if (!fin) {  // 파일 열기 실패 확인
-		cout << "student_data 파일을 열 수 없다";
+		cout << "student_data.csv 파일을 열 수 없다\n";
 	}
 		
 	fin >> temp;	// 맨 윗줄 없얘는 용도
+	st_string[0] = temp;
 
-	for (i = 1; i < 3; i++)
+	for (i = 1; i < 5; i++)
 	{
 		fin >> temp0;
-		cout << temp0  << endl;
+		st_string[i] = temp0;
 
 		temp2 = strtok_s(temp0, ",", &context);
 		st_data_number=temp2.c_str();
@@ -492,9 +542,13 @@ void find_student(CString _m_strRfid)
 
 		if (st_borrow_flag == _T("0"))
 		{
-			st_borrow_date.Format(_T("빌린 책 없음"));
-			st_return_date.Format(_T("0"));
-			st_book_number.Format(_T("0"));
+			temp2 = strtok_s(NULL, ",", &context);
+			st_borrow_date = temp2.c_str();
+
+			temp2 = strtok_s(NULL, ",", &context);
+			st_return_date = temp2.c_str();
+
+			st_book_number.Format(_T("빌린 책 없음"));
 		}
 		else
 		{
@@ -511,6 +565,12 @@ void find_student(CString _m_strRfid)
 		if (st_card_number == _m_strRfid)
 		{
 			st_flag = i;
+
+			for (int j = i + 1; j < 5; j++)
+			{
+				fin >> temp0;
+				st_string[j] = temp0;
+			}
 			break;
 		}
 	}
@@ -522,9 +582,8 @@ void find_student(CString _m_strRfid)
 void find_book(CString _m_strRfid)
 {
 	int i;
-	char temp[100], temp0[100], * context = NULL;
+	char temp[100], temp0[200], * context = NULL;
 	string temp2;
-
 
 	ifstream bk_fin;
 	bk_fin.open("c:\\work\\RFID\\RFID\\RFID\\data\\book_data.csv");
@@ -555,10 +614,58 @@ void find_book(CString _m_strRfid)
 		temp2 = strtok_s(NULL, ",", &context);
 		bo_picture = temp2.c_str();
 
-
 		if (bo_card_number == _m_strRfid) break;
-
 	}
 	bk_fin.close();
 }
 
+void CRFIDDlg::show_st_picture()
+{
+	/////////////////////////////////  이미지 출력  /////////////////////////////////
+	CRect m_rect;
+	CBitmap m_bitmap;
+	//CString Path_img = "img\\null.bmp";
+	CString Path_img = st_picture; //_T("img\\beer.bmp");
+	m_bitmap.DeleteObject();
+	m_bitmap.Attach((HBITMAP)LoadImage(NULL, Path_img, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+	CDC* pDC = GetDC();
+	CDC memDC;
+	memDC.CreateCompatibleDC(pDC);
+	memDC.SelectObject(m_bitmap);
+	((CStatic*)GetDlgItem(IDC_STATIC02))->GetWindowRect(m_rect);
+	ScreenToClient(&m_rect);
+	CClientDC   dc(this);
+
+	dc.BitBlt(100, 25, 300, 250, &memDC, 0, 0, SRCCOPY);
+
+	ReleaseDC(pDC);
+	DeleteDC(memDC);
+}
+
+void CRFIDDlg::show_bo_picture()
+{
+	CRect m_rect;
+	CBitmap m_bitmap;
+	//CString Path_img = "img\\null.bmp";
+	CString Path_img = bo_picture; //_T("img\\beer.bmp");
+	m_bitmap.DeleteObject();
+	m_bitmap.Attach((HBITMAP)LoadImage(NULL, Path_img, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+	CDC* pDC = GetDC();
+	CDC memDC;
+	memDC.CreateCompatibleDC(pDC);
+	memDC.SelectObject(m_bitmap);
+	((CStatic*)GetDlgItem(IDC_STATIC03))->GetWindowRect(m_rect);
+	ScreenToClient(&m_rect);
+	CClientDC   dc(this);
+
+	dc.BitBlt(680, 25, 300, 250, &memDC, 0, 0, SRCCOPY);
+
+	ReleaseDC(pDC);
+	DeleteDC(memDC);
+}
+
+void CRFIDDlg::OnIddRfidDialog()
+{
+
+
+}

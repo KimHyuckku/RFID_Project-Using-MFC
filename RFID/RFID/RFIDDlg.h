@@ -46,8 +46,8 @@ public:
 	afx_msg void OnReadOnce();
 	CString m_strRfid;
 	CString m_strRfid2;
-	CString st_strRfid;
-	CString st_strRfid2;
+	CString st_m_strRfid;
+	CString bo_m_strRfid;
 	
 	afx_msg void OnBnClickedButton4();
 	afx_msg void OnBnClickedButton5();
@@ -55,4 +55,8 @@ public:
 	afx_msg void OnBnClickedOk();
 	
 	afx_msg void OnBnClickedButton7();
+	void show_st_picture();
+	void show_bo_picture();
+	CString m_strDate;
+	afx_msg void OnIddRfidDialog();
 };
